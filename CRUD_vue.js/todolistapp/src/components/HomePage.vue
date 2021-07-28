@@ -1,13 +1,13 @@
 <template>
     <div class="container mt-5">
         <div>
-            <input v-on:keyup = "search_task"  name='search' type="text" placeholder="Search task">
+            <input v-on:keyup = "search_task" v-model= "search_text" name='search' type="text" placeholder="Search task">
             <button class="btn btn-success ml-3"> Search </button>
         </div>
         <div class="justify-content-between mt-2">
             <h5 class="display-5">Todo list app</h5>
         </div>
-        <input name='task' type="text" class="form-control" placeholder="Add task..">
+        <input  v-model= "task_text" name='task' type="text" class="form-control" placeholder="Add task..">
         <button v-on:click = "save_todo" type="submit" class="btn btn-primary mt-2">Save</button>
         <div class="card mt-2" v-for="todo in todos" :key="todo.id">
             <div class="card-body justify-content-between">
@@ -16,42 +16,29 @@
                 <button v-on:click = "modal_show(todo.id,todo.task)" class="btn btn-danger" :id="todo.id" data-toggle="modal" data-target="#exampleModal"> Delete</button>
             </div>
         </div>
-        <div id="delete_modal_div">
-            <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-                <div class="modal-dialog" role="document">
-                    <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 v-if= "isEdit" class="modal-title" id="exampleModalLabel">Edit Task</h5>
-                        <h5 v-else class="modal-title" id="exampleModalLabel">Delete Task</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                        <button v-if= "isEdit" v-on:click = 'edit_task()' value="" id='edit-id' type="button" class="btn btn-info" data-dismiss="modal">Update</button>
-                        <button v-else v-on:click = 'delete_task()' value="" id='delete-id' type="button" class="btn btn-danger" data-dismiss="modal">Delete</button>
-                    </div>
-                    </div>
-                </div>
-            </div>
+        <div id="modal">
+           <Modal :isEdit= "isEdit" :task= "task" :todo= "todo" @delete_task = 'delete_task' @edit_task= "edit_task" />
         </div>
     </div>
 </template>
 
 <script>
 import axios from 'axios'
-
+import Modal from './Modal.vue'
 
 export default {
     name:'HomeView',
+    components:{
+        Modal
+    },
     data(){
         return{
             todos: [],
-            isEdit:false
+            isEdit:false,
+            task_text : "",
+            search_text : "",
+            task: "",
+            todo: ""
         }
     },
     mounted(){
@@ -67,24 +54,22 @@ export default {
             await this.getValue()
         },
         save_todo:function(){
-            const task = document.querySelector("input[name=task]").value
-            if(task.length>0){
-                const todo = {task:task}
+            if(this.task_text.length>0){
+                const todo = {task:this.task_text}
                 axios.post('http://localhost:8000/',todo)
                 .then(
                     res=> this.todos.unshift(res.data)
                 )
-                document.querySelector("input[name=task]").value = ""
-                document.querySelector("input[name=search]").value = ""
+                this.task_text = ""
+                this.search_text = ""
             }else{
                 alert('Insert at least on letter')
             }
         },
         search_task:function(){
-            const task = document.querySelector("input[name=search]").value
-            if(task.length==0) this.getValue()
+            if(this.search_text.length==0) this.getValue()
             else{
-                axios.get('http://localhost:8000/search/'+task)
+                axios.get('http://localhost:8000/search/'+this.search_text)
                 .then(res=>this.todos=res.data)
             }
         },
@@ -97,8 +82,7 @@ export default {
             await this.toggleButton(true)
             var btn = document.querySelector('#edit-id')
             btn.value = task_id
-            var input = document.querySelector('.modal-body')
-            input.innerHTML = `<input id="edit_input" type="text" value="${task}">`
+            this.task = task
         },
         async edit_task(){
             var id = document.querySelector('#edit-id').value
@@ -119,7 +103,7 @@ export default {
             await this.toggleButton(false)
             var btn = document.querySelector('#delete-id')
             btn.value = task_id
-            document.querySelector('.modal-body').innerHTML =  `Do you want to delete `+todo+`?`
+            this.todo = todo
         }
     },
     
